@@ -24,14 +24,36 @@ options(scipen=999)
 currentDate <- Sys.Date()
 
 ## Set directories
-# setwd("D:/Shared/BackedUp/Caitlin/ES-SupplyDemand")
-setwd("//goshawk.sefs.uw.edu/Space_Lawler/Shared/BackedUp/Caitlin/ES-SupplyDemand")
-# wd <- ("D:/Shared/BackedUp/Caitlin/ES-SupplyDemand")
-wd <- ("//goshawk.sefs.uw.edu/Space_Lawler/Shared/BackedUp/Caitlin/ES-SupplyDemand")
+setwd("D:/Shared/BackedUp/Caitlin/ES-SupplyDemand")
+# setwd("//goshawk.sefs.uw.edu/Space_Lawler/Shared/BackedUp/Caitlin/ES-SupplyDemand")
+wd <- ("D:/Shared/BackedUp/Caitlin/ES-SupplyDemand")
+# wd <- ("//goshawk.sefs.uw.edu/Space_Lawler/Shared/BackedUp/Caitlin/ES-SupplyDemand")
 
 lulc.dir <- paste0(wd,"/Sohl_2014_LULC/Landcover/")
 for.dir <- paste0(wd,"/Sohl_2014_LULC/Forest/")
-c.dir <- paste0(wd,"/Sleeter_C/")
-nlcd.dir <- paste0(wd,"/NLCD_2016/")
+c.dir <- paste0(wd,"/Sleeter_2018_C/")
+county.dir <- paste0(wd,"/counties_2016/")
+nlcd.dir <- ("D:/Shared/Scratch/Data/NLCD_2016/")
 out.dir <- paste0(wd,"/out/")
+
+
+##############################################
+## To plot raster in ggplot, extract values into tibble
+# ref: https://stackoverflow.com/questions/47116217/overlay-raster-layer-on-map-in-ggplot2-in-r
+# Define function to extract raster values into a tibble
+gplot_data <- function(x, maxpixels = 50000)  {
+  x <- raster::sampleRegular(x, maxpixels, asRaster = TRUE)
+  coords <- raster::xyFromCell(x, seq_len(raster::ncell(x)))
+  ## Extract values
+  dat <- utils::stack(as.data.frame(raster::getValues(x))) 
+  names(dat) <- c('value', 'variable')
+  
+  dat <- dplyr::as.tbl(data.frame(coords, dat))
+  
+  if (!is.null(levels(x))) {
+    dat <- dplyr::left_join(dat, levels(x)[[1]], 
+                            by = c("value" = "ID"))
+  }
+  dat
+}
 
