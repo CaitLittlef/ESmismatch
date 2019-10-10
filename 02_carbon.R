@@ -68,20 +68,25 @@ start <- Sys.time()
 l <- list() 
 loop.ready <- unique(values(r.county)) # Grab unique county IDs
 loop.ready <- loop.ready[is.finite(loop.ready)] # Retain numbers, nix NA
+# i <- 49009
 for(i in loop.ready) {
   mask <- r.county %in% i # Filtering or r.vt==i don't work
   mask[mask == 0] <- NA # remove NA areas
-  target <- stack.test %>% mask(mask) # Only keep those in mask; crop messes with extents so don't use.
+  target <- stack %>% mask(mask) # Only keep those in mask; crop messes with extents so don't use.
   byzone <- zonal(target$c2015, target$nlcd, fun = "mean", digits = 0) # Avg. c val per class
   byzone <- data.frame(t(byzone)) # df else sets to vector when dropping row below; t() to set zones as col names
   colnames(byzone) <- paste0("z",byzone[1,]) # skip rownames -- get dropped in rbind.fillmatrix()
   byzone <- byzone[-c(1),] # Get rid of zone row
-  l.vt[[paste0(i)]] <- byzone # Fill in list
+  l[[paste0(i)]] <- byzone # Fill in list
+  print(paste0("Finished county", i))
 }
-Sys.time() - start
 
 # Bind all dataframes of carbon by class for each county.
 m <- plyr::rbind.fill.matrix(l) # Preserves column names (here, zones defined in loop)
 rownames(m) <- paste0("c",loop.ready) # Assign names based on county IDs. 
 head(m, 10)
 
+today <- Sys.Date()
+write.csv(m, paste0("carbon_by_lu_by_county_", today, ".csv"))
+
+Sys.time() - start
