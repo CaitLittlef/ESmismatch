@@ -28,12 +28,21 @@ for(i in loop.ready) {
   mask[mask == 0] <- NA # remove NA areas
   stack.test.2 <- stack.test %>% mask(mask) # extract carbon & lu vals
   byzone <- zonal(stack.test.2$c2015.test, stack.test.2$nlcd.test, fun = "mean", digits = 0)
-  
   # Not all zones are in every county; keep coefficients as matrices (vs. byzone[,2])
   # Transpose to put zones as column names for use with rbind.fill.matrix()
-  ctemp[[paste0(i)]] <- t(byzone) 
+  byzone <- data.frame(t(byzone))
+  
+  ## START HERE. NOTE ZONE NAMES (NUMBERS) ARE RETAINED IN ZONAL. SEE 13th COUNTY IN VT
+  
+  colnames(byzone) <- paste0("z",byzone[1,])
+  byzone <- byzone %>% dplyr::select()
+  rownames(byzone) <- paste0("c",loop.ready)
+  ctemp[[paste0(i)]] <- byzone 
 }
+
+https://stackoverflow.com/questions/45374422/rename-column-of-dataframes-inside-a-list-with-its-dataframe-name
 z <- lapply(ctemp, data.frame)
+z <- map_dfr(ctemp)
 z <- lapply(z, fun(x) {colnames(x) <- paste0("z", as.integer(x[1,])); x})
 z[[13]]
 test <- plyr::rbind.fill.matrix(ctemp)
