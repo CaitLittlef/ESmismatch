@@ -1,7 +1,7 @@
 #####################################
 # Install packages if not already installed
 required.packages <- c("ncdf4", "ggplot2", "raster", "sf", "rgdal", "dplyr",
-                       "tidyverse", "maptools", "rgeos", "Rcpp")
+                       "tidyverse", "maptools", "rgeos", "Rcpp", "fasterize")
 new.packages <- required.packages[!(required.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)>0) install.packages(new.packages)
 rm(required.packages, new.packages)
@@ -15,6 +15,7 @@ library(dplyr)
 library(tidyverse)
 library(rgeos)
 library(ncdf4)
+library(fasterize)
 
 
 ## Turn off scientific notation
@@ -57,3 +58,17 @@ gplot_data <- function(x, maxpixels = 50000)  {
   dat
 }
 
+
+
+# Text extraction functions
+left = function(text, num_char) {
+  substr(text, 1, num_char)
+}
+
+mid = function(text, start_num, num_char) {
+  substr(text, start_num, start_num + num_char - 1)
+}
+
+right = function(text, num_char) {
+  substr(text, nchar(text) - (num_char-1), nchar(text))
+}
