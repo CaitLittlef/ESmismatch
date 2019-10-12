@@ -1,32 +1,47 @@
 ## Goal: extract carbon value associated with each cover class (per NLCD) in each county.
 # Use this lookup table (of carbon by cover by county) to compute total carbon in each county in the future.
 
+## Set temporary storage in stractch drive. 
+tmpDir(create = TRUE) # [1] "C:\\Users\\clittlef\\AppData\\Local\\Temp\\7\\RtmpQbFX3Z/raster/"
+rasterOptions(tmpdir = "D://Shared//Scratch//Workspace//Littlefield//ESmismatch")
+r.temp.dir <- "D://Shared//Scratch//Workspace//Littlefield//ESmismatch/" 
+tmpDir(create = TRUE) # [1] "D://Shared//Scratch//Workspace//Littlefield//ESmismatch/"
+rasterOptions(default=TRUE) # Doesn't change it back... FIXME
+
+
 par(mfrow=c(1,1))
 
 ## Load all datasets
 c2015 <- raster(paste0(c.dir, "c2015.p.tif")) ; names(c2015) <- "c2015"
 nlcd <- raster(paste0(lulc.dir, "nlcd.reclass.960.tif")) ; names(nlcd) <- "nlcd"
 
+
 county <- st_read(paste0(county.dir, "CONUS.county.p.shp"))
 # Convert relevant attributes to numeric else factor index will get used in loop below.
 county$STATEFP <- as.numeric(as.character(county$STATEFP))
 county$GEOID <- as.numeric(as.character(county$GEOID))
 
-# Subset to only run 1/2 country at once.
-summary(county$STATEFP) # min 1, max 56
-county.1 <- county %>% filter(STATEFP <= 29) # gives roughly 1500 obs
-county.2 <- county %>% filter(STATEFP > 29) # gives roughly 1500 obs
+# # Subset to only run 1/2 country at once; keep contiguous else fails I think.
+# statefp <- unique(county$STATEFP)
+# west <- c(53, 41, 6, 32, 16, 30, 56, 49, 4, 8, 35, 38, 46, 31, 20, 40, 48) # based on map
+# east <- statefp[which(!statefp %in% west)]
+# county.west <- county %>% filter(STATEFP %in% west)
+# county.east <- county %>% filter(STATEFP %in% east)
 
+# # Crop other vars for fasteriz and loop
+# c2015.west <- c2015 %>% crop(county.west) %>% mask(county.west)
+# c2015.east <- c2015 %>% crop(county.east) %>% mask(county.east)
+# nlcd.west <- nlcd %>% crop(county.west) %>% mask(county.west)
+# nlcd.east <- nlcd %>% crop(county.east) %>% mask(county.east)
+
+# Convert to raster
 r.county <- fasterize(county, nlcd, field = "GEOID"); names(r.county) <- "county"
-r.county.1 <- fasterize(county.1, nlcd, field = "GEOID") ; names(r.county.1 <- "county.1")
-r.county.2 <- fasterize(county.2, nlcd, field = "GEOID") ; names(r.county.2 <- "county.1")
+# r.county.west <- fasterize(county.west, r.county, field = "GEOID") ; names(r.county.west <- "county.west")
+# r.county.east <- fasterize(county.east, r.county, field = "GEOID") ; names(r.county.east <- "county.east")
 
 plot(r.county) # Appears to be by state, but intra-state values differ.
-plot(r.county.1) # Appears to be by state, but intra-state values differ.
-plot(r.county.2) # Appears to be by state, but intra-state values differ.
-
-#################
-
+# plot(r.county.west) # Appears to be by state, but intra-state values differ.
+# plot(r.county.east) # Appears to be by state, but intra-state values differ.
 
 
 ###########################################
@@ -47,7 +62,7 @@ plot(r.county.2) # Appears to be by state, but intra-state values differ.
 # 
 # ## Looping thru counties to summarize carbon values by cover type.
 # # N.b., some counties don't have all zones; keep zonal output as matrix to match zones in rbind
-# l.vt <- list() 
+# l.vt <- list()
 # loop.ready <- unique(values(r.vt)) # Grab unique county IDs
 # loop.ready <- loop.ready[is.finite(loop.ready)] # Retain numbers, nix NA
 # # loop.ready <- 50011
@@ -64,7 +79,7 @@ plot(r.county.2) # Appears to be by state, but intra-state values differ.
 # 
 # # Bind all dataframes of carbon by class for each county.
 # m.vt <- plyr::rbind.fill.matrix(l.vt) # Preserves column names (here, zones defined in loop)
-# rownames(m.vt) <- paste0("c",loop.ready) # Assign names based on county IDs. 
+# rownames(m.vt) <- paste0("c",loop.ready) # Assign names based on county IDs.
 # head(m.vt, 10)
 
 
@@ -96,17 +111,14 @@ for(i in loop.ready) {
   byzone <- byzone[-c(1),] # Get rid of zone row
   l[[paste0(i)]] <- byzone # Fill in list
   print(paste0("Finished county ", i))
+  
+  # Stop clog in tmeporary directly. Invisibly remove temp files which get big.
+  invisible(file.remove(list.files(r.temp.dir, full.names = T)))
 }
 
 
 ###########################################################################
 ## Had errors, which may be b/c of temp storage
-# memory.limit()
-# Don't think setting new space (as from NPVuln proj below) will help b/c whole C drive PACKED.
-# tmpDir(create = TRUE) # [1] "C:\\Users\\clittlef\\AppData\\Local\\Temp\\10\\RtmpUTJJ6d/raster/"
-# rasterOptions(tmpdir = "//main.sefs.uw.edu/main/Space/Lawler/Shared/Caitlin/temp_for_fat_files")
-# tmpDir(create = TRUE) # [1] "//main.sefs.uw.edu/main/Space/Lawler/Shared/Caitlin/temp_for_fat_files/"
-# rasterOptions(default=TRUE) # Doesn't change it back... FIXME
 
 ## Errors mid-loop:
 # Error in `names<-`(`*tmp*`, value = lnames) : 
