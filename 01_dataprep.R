@@ -173,25 +173,3 @@ county <- st_transform(county, st_crs(nlcd))
 county <- st_read(paste0(county.dir, "CONUS.county.p.shp"))
 # plot(test)
 
-
-## Try mapping c & counties just to see... TAKES LONG TIME
-# Pull c data into table (function defined in 00_setup)
-# c_data <- gplot_data(c2015.p)
-# p <- ggplot() +
-#   geom_tile(data = c_data, aes(x = x, y = y, fill = value)) +
-#   scale_fill_gradient("carbon",
-#                       low = "yellow", high = "green",
-#                       na.value = NA) +
-#   geom_sf(data = county, color = "#808B96", fill = "white") +
-#   theme_bw(base_size = 18)
-# p
-
-
-
-
-## Load FORESCE datasets ** NOT NECESSARY! USE LOOK-UP TABLES JESSE MADE **
-# a1b2020 <- raster(paste0(lulc.dir, "CONUS_Landcover_A1B/CONUS_A1B_y2020.tif"))
-# crs(a1b2020)
-# hist(a1b2020)
-# plot(a1b2020)
-# crs(a1b2006)
