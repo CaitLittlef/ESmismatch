@@ -1,7 +1,7 @@
 #####################################
 # Install packages if not already installed
 required.packages <- c("ncdf4", "ggplot2", "raster", "sf", "rgdal", "dplyr",
-                       "tidyverse", "maptools", "rgeos", "Rcpp", "fasterize")
+                       "tidyverse", "readr", "maptools", "rgeos", "Rcpp", "fasterize")
 new.packages <- required.packages[!(required.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)>0) install.packages(new.packages)
 rm(required.packages, new.packages)
@@ -16,6 +16,7 @@ library(tidyverse)
 library(rgeos)
 library(ncdf4)
 library(fasterize)
+library(readr)
 
 
 ## Turn off scientific notation
@@ -29,6 +30,7 @@ setwd("D:/Shared/BackedUp/Caitlin/ES-SupplyDemand")
 # setwd("//goshawk.sefs.uw.edu/Space_Lawler/Shared/BackedUp/Caitlin/ES-SupplyDemand")
 wd <- ("D:/Shared/BackedUp/Caitlin/ES-SupplyDemand")
 # wd <- ("//goshawk.sefs.uw.edu/Space_Lawler/Shared/BackedUp/Caitlin/ES-SupplyDemand")
+
 
 lulc.dir <- paste0(wd,"/Sohl_2014_LULC/Landcover/")
 for.dir <- paste0(wd,"/Sohl_2014_LULC/Forest/")
@@ -72,3 +74,4 @@ mid = function(text, start_num, num_char) {
 right = function(text, num_char) {
   substr(text, nchar(text) - (num_char-1), nchar(text))
 }
+
