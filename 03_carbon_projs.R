@@ -32,76 +32,104 @@ lu_c$CARBON <- NULL
 
 
 #######################################################################
-#### Load table of each county's landcover coverage (in ha) for each decade and each scenario ####
+#### Load table of each county's landcover area, by decade by scenario (thx Jesse!) ####
 proj.list <- list.files(path = paste0(lulc.dir,"CountySummary_CSVs"),
-                        pattern="20.0.csv", full.names = TRUE) # get all decades
-A1B.list <- grep(pattern = "A1B", x = proj.list, value = TRUE) %>% sort(.)
-A2.list <- grep(pattern = "A2", x = proj.list, value = TRUE) %>% sort(.)
-B1.list <- grep(pattern = "B1", x = proj.list, value = TRUE) %>% sort(.)
-B2.list <- grep(pattern = "B2", x = proj.list, value = TRUE) %>% sort(.)
-rm(proj.list)
-
+                        pattern="2..0.csv", full.names = TRUE) # get all decades
+proj.list <- proj.list[1:40] # To drop historical_2000
+# Also grab just names of csv for assigning
+proj.names <- list.files(path = paste0(lulc.dir,"CountySummary_CSVs"),
+                        pattern="2..0.csv", full.names = FALSE) # get all decades
+proj.names <- proj.names[1:40] # To drop historical_2000
+proj.names <- tools::file_path_sans_ext(proj.names) # To drop extension .csv
+# A1B.list <- grep(pattern = "A1B", x = proj.list, value = TRUE) %>% sort(.)
+# A2.list <- grep(pattern = "A2", x = proj.list, value = TRUE) %>% sort(.)
+# B1.list <- grep(pattern = "B1", x = proj.list, value = TRUE) %>% sort(.)
+# B2.list <- grep(pattern = "B2", x = proj.list, value = TRUE) %>% sort(.)
 
 
 #######################################################################
 #### TESTING GROUND ####
-cnty_lu_area <- read.csv(A1B.list[1])
-count(cnty_lu_area, LANDCOVER) # Still has old (too many) codes (0-17)
-# Reclassify dataset to fewer classes based on JEsse's look-up table
-lu.foresce <- read.csv(paste0(lulc.dir,"FORESCE_reclass.csv"))
-count(lu.foresce, FORESCE_code) # (1-17 -- missing zero)???
-
-# FIXME:
-############ *****************************************
-############ *****************************************
-#  EMAILED JESSE 101929 TO ASK WHAT ZERO IS. FOR NOW, JUST DELETE
-cnty_lu_area <- cnty_lu_area %>% filter(LANDCOVER > 0)
-############ *****************************************
-############ *****************************************
-
-# Join look-up to projections (too many codes), redefine (fewer) LANDCOVER codes.
-cnty_lu_area <- cnty_lu_area %>%
-  left_join(lu.foresce, by = c("LANDCOVER" = "FORESCE_code")) %>%
-  dplyr::select(-LANDCOVER, -FORESCE_name, -new_name) %>%
-  dplyr::rename(LANDCOVER = new_code)
-
-# Should no longer be any NAs
-cnty_lu_area <- cnty_lu_area[!is.na(cnty_lu_area$LANDCOVER),]
-
-# Because it was many->one, have dupe LANDOVERS
-cnty_lu_area <- cnty_lu_area %>%
-  group_by(SCENARIO, YEAR, COUNTY, LANDCOVER) %>%
-  summarise(AREA_HA = sum(AREA_HA)) %>%
-  ungroup() %>% data.frame() # Else remains grouped dataframe
-
-# Join carbon look-up to this table
-cnty_lu_area_c <- left_join(cnty_lu_area, lu_c, by=c("COUNTY", "LANDCOVER"))
-# Checks out: open-water continues to have zero.
-
-# Summarize to carbon stocks per county, mult LANDCOVER code by c coeff.
-# NAs arise b/c new landcover appears for a given county. Set to NA carbon for now.
-
-# FIXME:
-#################*********************########################
-#################*********************########################
-#### WHAT TO DO WITH NEW LANDCOVER CLASS?? 
-#################*********************########################
-#################*********************########################
-
-cnty_lc_c <- cnty_lu_area_c %>%
-  group_by(SCENARIO, YEAR, COUNTY) %>%
-  mutate(CARBON_KG = AREA_HA * replace_na(CARBON_KGHA, 0))
-
-# Summarise to total carbon per county.
-cnty_c <- cnty_lc_c %>%
-  group_by(SCENARIO, YEAR, COUNTY) %>%
-  summarise(CARBON_KG_TOT = sum(CARBON_KG), na.rm = TRUE)
+# cnty_lc_area <- read.csv(proj.list[1])
+# count(cnty_lc_area, LANDCOVER) # Still has old (too many) codes (0-17)
+# # Jesse says those zeros likely introduced during raster processing: delete
+# cnty_lc_area <- cnty_lc_area %>% filter(LANDCOVER > 0)
+# count(cnty_lc_area, LANDCOVER) # Just 1-17
+# # Reclassify dataset to fewer classes based on JEsse's look-up table
+# lu.foresce <- read.csv(paste0(lulc.dir,"FORESCE_reclass.csv"))
+# count(lu.foresce, FORESCE_code) # (1-17 -- missing zero)???
+# 
+# # Join look-up to projections (many codes), redefine (to one) LANDCOVER codes.
+# p <- cnty_lc_area %>%
+#   left_join(lu.foresce, by = c("LANDCOVER" = "FORESCE_code")) %>%
+#   dplyr::select(-LANDCOVER, -FORESCE_name, -new_name) %>%
+#   dplyr::rename(LANDCOVER = new_code)
+# 
+# # Should no longer be any NAs
+# p <- p[!is.na(p$LANDCOVER),]
+# 
+# # Because it was many->one, have dupe LANDCOVERS
+# p <- p %>%
+#   group_by(SCENARIO, YEAR, COUNTY, LANDCOVER) %>%
+#   summarise(AREA_HA = sum(AREA_HA)) %>%
+#   ungroup() %>% data.frame() # Else remains grouped dataframe
+# 
+# # Join carbon look-up to this table
+# pc <- left_join(p, lu_c, by=c("COUNTY", "LANDCOVER"))
+# # Checks out: open-water continues to have zero.
+# 
+# # Mult LANDCOVER code by c coeff.
+# # Replace on-the-fly any NAs for "new" landcover (never in county before) with county avg.
+# # Alt: recompute carbon coefficient for that class within the county. Checks out:
+# pc <- pc %>%
+#   group_by(SCENARIO, YEAR, COUNTY) %>%
+#   mutate(CARBON_KG = AREA_HA * replace_na(CARBON_KGHA, mean(CARBON_KGHA, na.rm=TRUE))) #%>%
+# #   mutate(CARBON_KGHA2 = ifelse(is.na(CARBON_KGHA), mean(CARBON_KGHA, na.rm=TRUE), CARBON_KGHA)) %>%
+# #   mutate(CARBON_KG2 = AREA_HA * CARBON_KGHA2)
+# # identical(pc$CARBON_KG, pc$CARBON_KG2)
+# 
+# # Summarise to county level, adding all landclasses together
+# cnty_c <- pc %>% group_by(SCENARIO, YEAR, COUNTY) %>%
+#   summarise(CARBON_KG_TTL = sum(CARBON_KG))
+# 
+# # Conver to metric tons
+# cnty_c$CARBON_Mg <-  round(cnty_c$CARBON_KG_TTL*0.001,0)
+# cnty_c$CARBON_KG_TTL <- NULL
 
 
-class(cnty_lu_area)
+#######################################################################
+#### LOOP THRU ALL PROJETIONS ####
+carbon.list <- list()
+for(i in 1:length(proj.list)){
+  p <- read.csv(proj.list[i])
+  p <- p %>% filter(LANDCOVER > 0) # drop zeros, artifact of raster calc
+  # Reclassify to fewer landcover classes
+  p <- p %>%
+    left_join(lu.foresce, by = c("LANDCOVER" = "FORESCE_code")) %>% # join 
+    dplyr::select(-LANDCOVER, -FORESCE_name, -new_name) %>%
+    dplyr::rename(LANDCOVER = new_code)
+  # Aggregate areas now in the same cover class
+  p <- p %>%
+    group_by(SCENARIO, YEAR, COUNTY, LANDCOVER) %>%
+    summarise(AREA_HA = sum(AREA_HA)) %>%
+    ungroup() %>% data.frame() # Else remains grouped dataframe
+  pc <- left_join(p, lu_c, by=c("COUNTY", "LANDCOVER"))
+  # Compute total carbon stocks by landcover
+  pc <- pc %>%
+    group_by(SCENARIO, YEAR, COUNTY) %>%
+    mutate(CARBON_KG = AREA_HA * replace_na(CARBON_KGHA, mean(CARBON_KGHA, na.rm=TRUE))) %>%
+    ungroup() %>% data.frame() 
+  # Summarise to county
+  cnty_c <- pc %>% group_by(SCENARIO, YEAR, COUNTY) %>%
+    summarise(CARBON_KG_TTL = sum(CARBON_KG)) %>% # Convert to metric tons
+    ungroup() %>% data.frame() 
+  cnty_c$CARBON_Mg <- round(cnty_c$CARBON_KG_TTL*0.001)
+  cnty_c$CARBON_KG_TTL <- NULL
+  carbon.list[[i]] <- cnty_c
+}
 
-
-
-            
-sum(rowwise(cnty_lu_area$AREA_HA * cnty_lu_area$CARBON_KGHA))
-?rowwise
+# Combine into one table
+carbon_by_county <- do.call(rbind, carbon.list)
+currentDate <- Sys.Date()
+write.csv(carbon_by_county,
+          paste0("carbon_by_county_",currentDate,".csv"),
+          row.names = FALSE)
