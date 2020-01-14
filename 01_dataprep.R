@@ -95,13 +95,13 @@ c2015 <- c2015ttl - c2015soil
 c2015
 plot(c2015)
 
-# Project to nlcd (more recent datum)
-c2015 <- projectRaster(c2015, crs=crs(nlcd)); crs(c2015)
-writeRaster(c2015, paste0(c.dir, "c2015.p.tif"))
+# Project to nlcd's crs (defined above b/c it's more recent datum); p for projecft
+c2015 <- projectRaster(c2015, crs=crs); crs(c2015)
+# writeRaster(c2015, paste0(c.dir, "c2015.p.tif"))
 
 # Create rough bbox for NW WA zoom; get coords with click().
 # click(c2015, n = Inf, id = T, xy = T, cell = T, type = "n", show = T)
-# Turn these coords into a polygon (can also extract coords to bbox())
+# # Turn these coords into a polygon (can also extract coords to bbox())
 # ext <- as(raster::extent(-165, -145, 60, 70), "SpatialPolygons")
 # bbox <- bbox(ext)
 # plot(c2015ttl, ext = ext) # alt: plot(c2015ttl, ext = bbox)
@@ -119,22 +119,31 @@ nlcd <- raster(paste0(nlcd.dir,"NLCD_2016_Land_Cover_L48_20190424.img"))
 extent(nlcd)
 res(nlcd) # 30x30m
 crs(nlcd) # diff ellipsoid than carbon
-hist(nlcd)
+# hist(nlcd)
 # ^ Different resolution than carbon, but create look-up of carbon(kgC/m2) by class by county...
 #...at this 30 m resolution, averaging across all the pixels of that given class in that given county.
 nlcd
 
-# Reclassify NLCD dataset to fewer classes based on JEsse's look-up table
+
+# Resample to coarser resolution of c2015 to reduce computation time
+start <- Sys.time()
+nlcd.960 <- resample(nlcd, c2015, method = "ngb",filename = paste0(lulc.dir, "nlcd.960.tif"))
+print(Sys.time() - start)
+
+pdf("D:/Shared/Scratch/Workspace/Littlefield/temp/temp.pdf", width = 4, height = 4)
+plot(nlcd.960)
+dev.off()
+
+# Reclassify NLCD dataset to fewer classes based on Jesse's look-up table
 lu.nlcd <- read.csv(paste0(lulc.dir,"NLCD_reclass.csv"))
 lu.nlcd <- lu.nlcd %>%
   select(NLCD_code, new_code) %>%
   dplyr::rename(from = NLCD_code, to = new_code)
-# nlcd.reclass <- reclassify(nlcd, lu.nlcd)
-writeRaster(nlcd.reclass, paste0(lulc.dir, "nlcd.reclass.tif"))
+nlcd.960.reclass <- reclassify(nlcd.960, lu.nlcd)
+writeRaster(nlcd.960.reclass, paste0(lulc.dir, "nlcd.960.reclass.tif"),
+            overwrite = TRUE)
+print(Sys.time() - start)
 
-# Resample to coarser resolution of c2015 to reduce computation time
-nlcd.reclass.960 <- resample(nlcd.reclass, c2015, method = "ngb",
-                             filename = paste0(lulc.dir, "nlcd.reclass.960.tif"))
 
 
 
