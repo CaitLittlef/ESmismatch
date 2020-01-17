@@ -84,10 +84,10 @@ c2015soil
 #...no-data areas had v. lrg numbers (e.g., 9969209968386869047442886268468442020)
 c2015ttl[c2015ttl > 9999999] <- NA
 c2015soil[c2015soil > 9999999] <- NA
-plot(c2015ttl)
-zoom(c2015ttl)
-plot(c2015soil)
-zoom(c2015soil)
+# plot(c2015ttl)
+# zoom(c2015ttl)
+# plot(c2015soil)
+# zoom(c2015soil)
 
 ## LULC won't affect deep (2m) soil carbon much -- remove from consideration?
 # If yes, that leaves carbon dataset with living, standing/down dead, litter 
@@ -95,9 +95,11 @@ c2015 <- c2015ttl - c2015soil
 c2015
 plot(c2015)
 
-# Project to nlcd's crs (defined above b/c it's more recent datum); p for projecft
-c2015 <- projectRaster(c2015, crs=crs); crs(c2015)
-# writeRaster(c2015, paste0(c.dir, "c2015.p.tif"))
+# Project to nlcd's crs (it's more recent datum); p for project
+c2015 <- projectRaster(c2015,
+                       crs=crs(raster(paste0(nlcd.dir,"NLCD_2016_Land_Cover_L48_20190424.img"))));
+crs(c2015)
+# writeRaster(c2015, paste0(c.dir, "c2015.p.tif"), overwrite = TRUE)
 
 # Create rough bbox for NW WA zoom; get coords with click().
 # click(c2015, n = Inf, id = T, xy = T, cell = T, type = "n", show = T)
@@ -118,7 +120,7 @@ c2015 <- projectRaster(c2015, crs=crs); crs(c2015)
 nlcd <- raster(paste0(nlcd.dir,"NLCD_2016_Land_Cover_L48_20190424.img"))
 extent(nlcd)
 res(nlcd) # 30x30m
-crs(nlcd) # diff ellipsoid than carbon
+crs(nlcd) # diff ellipsoid than orig carbon; now carbon matches
 # hist(nlcd)
 # ^ Different resolution than carbon, but create look-up of carbon(kgC/m2) by class by county...
 #...at this 30 m resolution, averaging across all the pixels of that given class in that given county.
@@ -130,9 +132,9 @@ start <- Sys.time()
 nlcd.960 <- resample(nlcd, c2015, method = "ngb",filename = paste0(lulc.dir, "nlcd.960.tif"))
 print(Sys.time() - start)
 
-pdf("D:/Shared/Scratch/Workspace/Littlefield/temp/temp.pdf", width = 4, height = 4)
-plot(nlcd.960)
-dev.off()
+# pdf(temp.pdf, width = 4, height = 4)
+# plot(nlcd.960)
+# dev.off()
 
 # Reclassify NLCD dataset to fewer classes based on Jesse's look-up table
 lu.nlcd <- read.csv(paste0(lulc.dir,"NLCD_reclass.csv"))
@@ -143,6 +145,10 @@ nlcd.960.reclass <- reclassify(nlcd.960, lu.nlcd)
 writeRaster(nlcd.960.reclass, paste0(lulc.dir, "nlcd.960.reclass.tif"),
             overwrite = TRUE)
 print(Sys.time() - start)
+
+# pdf(temp.pdf, width = 4, height = 4)
+# plot(nlcd.960.reclass)
+# dev.off()
 
 
 
@@ -171,14 +177,17 @@ county$STATEFP <- droplevels(county$STATEFP) # leaves 49
 county <- county[!county$STATEFP == "02",]
 county$STATEFP <- droplevels(county$STATEFP) # leaves 48 
 levels(county$STATEFP) # leaves 48
-county <- st_transform(county, st_crs(nlcd))
+# county <- st_transform(county, st_crs(nlcd)) # Don't think this does full project...
 # plot(st_geometry(county))
 
 
-# Project to NLCD
-# county <- sf_project(county, crs) # This function needs string of proj4string
+
+# Project to NLCD 
+crs.nlcd <- paste(crs(nlcd))
+# county <- sf_project(county, crs.nlcd) # This function needs string of proj4string
 # Save JIC b/c it took forever to project
 # st_write(county, paste0(county.dir, "CONUS.county.p.shp"))
 county <- st_read(paste0(county.dir, "CONUS.county.p.shp"))
 # plot(test)
+
 
