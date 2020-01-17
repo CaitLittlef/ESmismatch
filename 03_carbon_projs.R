@@ -2,14 +2,14 @@
 
 #######################################################################
 #### Load carbon look-up table & land classes ####
-lu_c <- read.csv(paste0(wd,"/carbon_by_lu_by_county_2019-10-12.csv"))
+lu_c <- read.csv(paste0(wd,"/carbon_by_lu_by_county_2020-01-14.csv"))
 lu.nlcd <- read.csv(paste0(lulc.dir,"NLCD_reclass.csv"))
 
-# Not sure where zeros are from in NLCD -- should only have 1-7.
+# Not sure where zeros are from in NLCD -- should only have 1-8.
 # Must have been remnant class in reclassified NLCD raster. Drop.
 # Also nix unnecessary column X1
 summary(lu_c$z0) # Many NAs, low values (max 9.3)
-lu_c <- lu_c %>% dplyr::select(X, z1, z2, z3, z4, z5, z6, z7) %>%
+lu_c <- lu_c %>% dplyr::select(X, z1, z2, z3, z4, z5, z6, z7, z8) %>%
   rename(COUNTY = X)
 
 # Open water should have zero for terrestrial carbon
@@ -55,8 +55,8 @@ proj.names <- tools::file_path_sans_ext(proj.names) # To drop extension .csv
 # cnty_lc_area <- cnty_lc_area %>% filter(LANDCOVER > 0)
 # count(cnty_lc_area, LANDCOVER) # Just 1-17
 # # Reclassify dataset to fewer classes based on JEsse's look-up table
-# lu.foresce <- read.csv(paste0(lulc.dir,"FORESCE_reclass.csv"))
-# count(lu.foresce, FORESCE_code) # (1-17 -- missing zero)???
+lu.foresce <- read.csv(paste0(lulc.dir,"FORESCE_reclass.csv"))
+count(lu.foresce, FORESCE_code) # (1-17 -- missing zero)???
 # 
 # # Join look-up to projections (many codes), redefine (to one) LANDCOVER codes.
 # p <- cnty_lc_area %>%
@@ -133,3 +133,16 @@ currentDate <- Sys.Date()
 write.csv(carbon_by_county,
           paste0("carbon_by_county_",currentDate,".csv"),
           row.names = FALSE)
+
+## CHECK! Do these numbers make sense??
+# ref: https://www.fs.fed.us/pnw/sciencef/scifi195.pdf incl. forest floor but no soil
+# FS said west-side forests in WA & OR should store up to 400Mg/ha
+temp <- lu_c %>% filter(COUNTY > 53000 & COUNTY < 54000, LANDCOVER == 3)
+# >100000s kg/ha, which equates to 100s of Mg/ha (kg*0.001)
+
+# FS said WA & OR forests collectively store 2,100 million metric tons of carbon
+tempWA <- carbon_by_county %>% filter(COUNTY > 53000 & COUNTY < 54000, SCENARIO == "B1", YEAR == 2010)
+tempOR <- carbon_by_county %>% filter(COUNTY > 41000 & COUNTY < 42000, SCENARIO == "B1", YEAR == 2010)
+temp <- rbind(tempWA, tempOR)
+sum(temp$CARBON_Mg) # 3,331,352,436
+# ^ This number SHOULD be bigger than forets alone. At least it's on same order of magnitude. 
