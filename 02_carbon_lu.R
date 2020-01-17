@@ -11,7 +11,8 @@ rasterOptions(default=TRUE) # Doesn't change it back... FIXME
 
 ## Load all datasets
 c2015 <- raster(paste0(c.dir, "c2015.p.tif")) ; names(c2015) <- "c2015"
-nlcd <- raster(paste0(lulc.dir, "nlcd.reclass.960.tif")) ; names(nlcd) <- "nlcd"
+nlcd <- raster(paste0(lulc.dir, "nlcd.960.reclass.tif")) ; names(nlcd) <- "nlcd"
+
 
 county <- st_read(paste0(county.dir, "CONUS.county.p.shp"))
 # Convert relevant attributes to numeric else factor index will get used in loop below.
